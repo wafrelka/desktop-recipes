@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -ueo pipefail
+
+MITAMAE_VERSION="v1.10.5"
+MITAMAE_X64_URL="https://github.com/itamae-kitchen/mitamae/releases/download/$MITAMAE_VERSION/mitamae-x86_64-linux"
+MITAMAE_X64_SHA256="5da7427bd953bc66f79a502a23861e0825961656d3ff2928e89d8661c7e3a861"
+
+MITAMAE=".cache/mitamae-$(tr "." "_" <<< "$MITAMAE_VERSION")"
+
+function download_mitamae() {
+	local mitamae="$1"
+	local dir="$(dirname "$mitamae")"
+	echo "downloading mitamae binary"
+	mkdir -p "$dir"
+	temp_path="$(mktemp -p "$dir")"
+	curl -fsSL -o "$temp_path" "$MITAMAE_X64_URL" > /dev/null 2>&1
+	if ! (sha256sum -c <<< "$MITAMAE_X64_SHA256 $temp_path" > /dev/null); then
+		rm "$temp_path"
+		echo "broken mitamae binary"
+		exit 1
+	fi
+	chmod +x "$temp_path"
+	mv "$temp_path" "$mitamae"
+	echo "download completed"
+}
+
+if [ ! -f "$MITAMAE" ]; then
+	download_mitamae "$MITAMAE"
+fi
+
+exec "$MITAMAE" local "$@"
